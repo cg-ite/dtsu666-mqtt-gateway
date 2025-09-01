@@ -19,7 +19,6 @@ from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
 
 CONFIG_FILE = "config.json"
 
-
 WORD_ORDER = Endian.Big
 BYTE_ORDER = Endian.Big
 
@@ -28,32 +27,33 @@ header = [207, 701, 0, 0, 0, 0, 1, 10, 0, 0, 0, 1, 167, 0, 0,
           1000, 0, 0, 1000, 0, 0, 1000, 0, 0, 1000, 0, 0, 0, 0, 3, 3, 4]
 
 registermapping = {
-    "Volts_AB": {"addr":0x2000, 'scale': .1},
-    "Volts_BC": {"addr":0x2002, 'scale': .1},
-    "Volts_CA": {"addr":0x2004, 'scale': .1},
-    "Volts_L1": {"addr":0x2006, 'scale': .1},
-    "Volts_L2": {"addr":0x2008, 'scale': .1},
-    "Volts_L3": {"addr":0x200A, 'scale': .1},
-    "Current_L1": {"addr":0x200C, 'scale': .001},
-    "Current_L2": {"addr":0x200E, 'scale': .001},
-    "Current_L3": {"addr":0x2010, 'scale': .001},
-    "Total_System_Active_Power": {"addr":0x2012, 'scale': .1},
-    "Active_Power_L1": {"addr":0x2014, 'scale': .1},
-    "Active_Power_L2": {"addr":0x2016, 'scale': .1},
-    "Active_Power_L3": {"addr":0x2018, 'scale': .1},
-    "Total_System_Reactive_Power": {"addr":0x201A, 'scale': .1},
-    "Reactive_Power_L1": {"addr":0x201C, 'scale': .1},
-    "Reactive_Power_L2": {"addr":0x201E, 'scale': .1},
-    "Reactive_Power_L3": {"addr":0x2020, 'scale': .1},
-    "Total_System_Power_Factor": {"addr":0x202A, 'scale': .001},
-    "Power_Factor_L1": {"addr":0x202C, 'scale': .001},
-    "Power_Factor_L2": {"addr":0x202E, 'scale': .001},
-    "Power_Factor_L3": {"addr":0x2030, 'scale': .001},
-    "Frequency": {"addr":0x2044, 'scale': .01},
-    "DmPt": {"addr":0x2050, 'scale': .1},
-    "Total_import_kwh": {"addr":0x401E, 'scale': 1},
-    "Total_export_kwh": {"addr":0x4028, 'scale': 1},
+    "Volts_AB": {"addr": 0x2000, 'scale': .1},
+    "Volts_BC": {"addr": 0x2002, 'scale': .1},
+    "Volts_CA": {"addr": 0x2004, 'scale': .1},
+    "Volts_L1": {"addr": 0x2006, 'scale': .1},
+    "Volts_L2": {"addr": 0x2008, 'scale': .1},
+    "Volts_L3": {"addr": 0x200A, 'scale': .1},
+    "Current_L1": {"addr": 0x200C, 'scale': .001},
+    "Current_L2": {"addr": 0x200E, 'scale': .001},
+    "Current_L3": {"addr": 0x2010, 'scale': .001},
+    "Total_System_Active_Power": {"addr": 0x2012, 'scale': .1},
+    "Active_Power_L1": {"addr": 0x2014, 'scale': .1},
+    "Active_Power_L2": {"addr": 0x2016, 'scale': .1},
+    "Active_Power_L3": {"addr": 0x2018, 'scale': .1},
+    "Total_System_Reactive_Power": {"addr": 0x201A, 'scale': .1},
+    "Reactive_Power_L1": {"addr": 0x201C, 'scale': .1},
+    "Reactive_Power_L2": {"addr": 0x201E, 'scale': .1},
+    "Reactive_Power_L3": {"addr": 0x2020, 'scale': .1},
+    "Total_System_Power_Factor": {"addr": 0x202A, 'scale': .001},
+    "Power_Factor_L1": {"addr": 0x202C, 'scale': .001},
+    "Power_Factor_L2": {"addr": 0x202E, 'scale': .001},
+    "Power_Factor_L3": {"addr": 0x2030, 'scale': .001},
+    "Frequency": {"addr": 0x2044, 'scale': .01},
+    "DmPt": {"addr": 0x2050, 'scale': .1},
+    "Total_import_kwh": {"addr": 0x401E, 'scale': 1},
+    "Total_export_kwh": {"addr": 0x4028, 'scale': 1},
 }
+
 
 class Dtsu666Emulator:
     def __init__(self, device, slave_id=0x04):
@@ -69,19 +69,19 @@ class Dtsu666Emulator:
         self.RS485Settings = {
             'port': device,
             'baudrate': 9600,
-            'timeout': 1.0,          # response timeout = 1 sec
+            'timeout': 1.0,  # response timeout = 1 sec
             'stopbits': 1,
             'bytesize': 8,
             'parity': 'N',
             'identity': i1
         }
 
-        self.block = ModbusSequentialDataBlock(0, [0]*0x4052)
+        self.block = ModbusSequentialDataBlock(0, [0] * 0x4052)
         # SlaveID ins letzte Feld vom header schreiben
         header[-1] = slave_id
         self._setval(0, header)
 
-        self.store   = ModbusSlaveContext(hr=self.block)
+        self.store = ModbusSlaveContext(hr=self.block)
         self.context = ModbusServerContext(slaves={slave_id: self.store}, single=False)
 
     def _setval(self, addr, data):
@@ -114,46 +114,47 @@ class Dtsu666Emulator:
         self._setval(0x002f, builder.to_registers())
 
     def update(self, data):
-        for k,v in data.items():
+        for k, v in data.items():
             reg = registermapping[k]["addr"]
             d = v / registermapping[k]["scale"]
             builder = BinaryPayloadBuilder(byteorder=BYTE_ORDER, wordorder=WORD_ORDER)
             builder.add_32bit_float(d)
             self._setval(reg, builder.to_registers())
-            #print(f"[Update] Register {hex(reg)} ({k}) = {v}")
+            # print(f"[Update] Register {hex(reg)} ({k}) = {v}")
+
 
 # ==========================================================================================
 
 def load_config():
     """Load default config from JSON file."""
     if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, "r",encoding="UTF-8") as f:
+        with open(CONFIG_FILE, "r", encoding="UTF-8") as f:
             return json.load(f)
     else:
         # fallback default
         return {
-          "dtsu666": {
-            "port": "/dev/ttyUSB0",
-            "baudrate": 9600,
-            "slave_id": 1
-          },
-          "mqtt": {
-            "broker": "localhost",
-            "port": 1883,
-            "username": "user",
-            "password": "pass",
-            "topic_prefix": "dtsu666"
-          },
-          "poll_interval": 30,
-          "emulator": {
-            "enabled": True,
-            "port": "/dev/ttySO",
-            "baudrate": 9600,
-            "slave_id": 1
-          },
-          "logging": {
-            "level": 10
-          }
+            "dtsu666": {
+                "port": "/dev/ttyUSB0",
+                "baudrate": 9600,
+                "slave_id": 1
+            },
+            "mqtt": {
+                "broker": "localhost",
+                "port": 1883,
+                "username": "user",
+                "password": "pass",
+                "topic_prefix": "dtsu666"
+            },
+            "poll_interval": 30,
+            "emulator": {
+                "enabled": True,
+                "port": "/dev/ttySO",
+                "baudrate": 9600,
+                "slave_id": 1
+            },
+            "logging": {
+                "level": 10
+            }
         }
 
 
