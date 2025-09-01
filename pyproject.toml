@@ -1,0 +1,10 @@
+[project]
+name = "dtsu666-mqtt-gateway"
+version = "0.1.0"
+description = "A lightweight Python-based gateway that connects a DTSU666 energy meter via Modbus RTU to MQTT and Home Assistant."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "minimalmodbus==2.1.1",
+    "pymodbus==2.5.3",
+]
