@@ -17,3 +17,21 @@ My goal is to get the consumption data into my Home Assistant server.
 - Optional Modbus server emulation to serve MQTT data to inverters
 - Configurable via `config.json`
 - Designed to run as a background service with `systemd`
+
+## References
+This project is based on:
+- https://github.com/elfabriceu/DTSU666-Modbus
+- https://github.com/ChrisSiedler/dtsu666-Emulator/
+- https://github.com/runesl/dtsu666mqtt
+- https://github.com/johann-CH/ESP32_DTSU666_Modbus_MQTT_HA_Integration/tree/main
+- https://github.com/incub77/solis2mqtt
+
+
+Other usefull projects:
+- https://github.com/RafAustralia/Chint-DTSU666-20-modbus
+- https://github.com/emavap/DTSU666-H-HA/
+
+Big thank you all for your great work!
+
+## License
+GPLv3
