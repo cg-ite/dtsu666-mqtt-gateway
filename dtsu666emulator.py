@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 import json
 import os
-import sys
 import time
 import datetime
 import logging
+from threading import Thread
 
 from pymodbus.payload import BinaryPayloadBuilder
 from pymodbus.device import ModbusDeviceIdentification
@@ -17,19 +17,17 @@ from pymodbus.transaction import ModbusRtuFramer
 from pymodbus.datastore import ModbusSequentialDataBlock
 from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
 
-from threading import Thread
-
 CONFIG_FILE = "config.json"
 
 
-wordorder = Endian.Big
-byteorder = Endian.Big
+WORD_ORDER = Endian.Big
+BYTE_ORDER = Endian.Big
 
 header = [207, 701, 0, 0, 0, 0, 1, 10, 0, 0, 0, 1, 167, 0, 0,
           1000, 0, 0, 1000, 0, 0, 1000, 0, 0, 1000, 1, 10, 0, 0, 0,
           1000, 0, 0, 1000, 0, 0, 1000, 0, 0, 1000, 0, 0, 0, 0, 3, 3, 4]
 
-Registermapping = {
+registermapping = {
     "Volts_AB": {"addr":0x2000, 'scale': .1},
     "Volts_BC": {"addr":0x2002, 'scale': .1},
     "Volts_CA": {"addr":0x2004, 'scale': .1},
@@ -57,8 +55,8 @@ Registermapping = {
     "Total_export_kwh": {"addr":0x4028, 'scale': 1},
 }
 
-class dtsu666_emulator:
-    def __init__(self, device, SlaveID=0x04):
+class Dtsu666Emulator:
+    def __init__(self, device, slave_id=0x04):
         self.threads = {}
         i1 = ModbusDeviceIdentification()
         i1.VendorName = 'Pymodbus'
@@ -80,11 +78,11 @@ class dtsu666_emulator:
 
         self.block = ModbusSequentialDataBlock(0, [0]*0x4052)
         # SlaveID ins letzte Feld vom header schreiben
-        header[-1] = SlaveID
+        header[-1] = slave_id
         self._setval(0, header)
 
         self.store   = ModbusSlaveContext(hr=self.block)
-        self.context = ModbusServerContext(slaves={SlaveID: self.store}, single=False)
+        self.context = ModbusServerContext(slaves={slave_id: self.store}, single=False)
 
     def _setval(self, addr, data):
         self.block.setValues((addr), data)
@@ -106,7 +104,7 @@ class dtsu666_emulator:
 
     def set_date(self):
         now = datetime.datetime.now()
-        builder = BinaryPayloadBuilder(byteorder=byteorder, wordorder=wordorder)
+        builder = BinaryPayloadBuilder(byteorder=BYTE_ORDER, wordorder=WORD_ORDER)
         builder.add_16bit_int(now.second)
         builder.add_16bit_int(now.minute)
         builder.add_16bit_int(now.hour)
@@ -117,9 +115,9 @@ class dtsu666_emulator:
 
     def update(self, data):
         for k,v in data.items():
-            reg = Registermapping[k]["addr"]
-            d = v / Registermapping[k]["scale"]
-            builder = BinaryPayloadBuilder(byteorder=byteorder, wordorder=wordorder)
+            reg = registermapping[k]["addr"]
+            d = v / registermapping[k]["scale"]
+            builder = BinaryPayloadBuilder(byteorder=BYTE_ORDER, wordorder=WORD_ORDER)
             builder.add_32bit_float(d)
             self._setval(reg, builder.to_registers())
             #print(f"[Update] Register {hex(reg)} ({k}) = {v}")
@@ -127,9 +125,9 @@ class dtsu666_emulator:
 # ==========================================================================================
 
 def load_config():
-    """Load default config from JSON file"""
+    """Load default config from JSON file."""
     if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, "r") as f:
+        with open(CONFIG_FILE, "r",encoding="UTF-8") as f:
             return json.load(f)
     else:
         # fallback default
@@ -148,7 +146,7 @@ def load_config():
           },
           "poll_interval": 30,
           "emulator": {
-            "enabled": true,
+            "enabled": True,
             "port": "/dev/ttySO",
             "baudrate": 9600,
             "slave_id": 1
@@ -160,15 +158,13 @@ def load_config():
 
 
 if __name__ == "__main__":
-    """
-    Chint DTSU666 Modbus Emulator: A cmd tool for providing a virtual DTSU666 for testing.
-    """
+
     config = load_config()
     logging.basicConfig(level=logging.basicConfig(level=logging.DEBUG)
                         )
 
-    em1 = dtsu666_emulator(device=config["emulator"]["port"],
-                           SlaveID=config["emulator"]["slave_id"])
+    em1 = Dtsu666Emulator(device=config["emulator"]["port"],
+                          slave_id=config["emulator"]["slave_id"])
     em1.startserver()
 
     Testdata = {

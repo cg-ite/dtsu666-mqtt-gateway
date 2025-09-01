@@ -8,3 +8,8 @@ dependencies = [
     "minimalmodbus==2.1.1",
     "pymodbus==2.5.3",
 ]
+
+[dependency-groups]
+dev = [
+    "pylint>=3.3.8",
+]
