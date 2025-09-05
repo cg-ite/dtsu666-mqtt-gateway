@@ -1,12 +1,11 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-import json
-import os
 import time
 import datetime
 import logging
 from threading import Thread
 
+from config import load_config
 from pymodbus.payload import BinaryPayloadBuilder
 from pymodbus.device import ModbusDeviceIdentification
 from pymodbus.version import version as ModbusVersion
@@ -123,46 +122,10 @@ class Dtsu666Emulator:
             # print(f"[Update] Register {hex(reg)} ({k}) = {v}")
 
 
-# ==========================================================================================
-
-def load_config():
-    """Load default config from JSON file."""
-    if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, "r", encoding="UTF-8") as f:
-            return json.load(f)
-    else:
-        # fallback default
-        return {
-            "dtsu666": {
-                "port": "/dev/ttyUSB0",
-                "baudrate": 9600,
-                "slave_id": 1
-            },
-            "mqtt": {
-                "broker": "localhost",
-                "port": 1883,
-                "username": "user",
-                "password": "pass",
-                "topic_prefix": "dtsu666"
-            },
-            "poll_interval": 30,
-            "emulator": {
-                "enabled": True,
-                "port": "/dev/ttySO",
-                "baudrate": 9600,
-                "slave_id": 1
-            },
-            "logging": {
-                "level": 10
-            }
-        }
-
-
 if __name__ == "__main__":
 
-    config = load_config()
-    logging.basicConfig(level=logging.basicConfig(level=logging.DEBUG)
-                        )
+    config = load_config(CONFIG_FILE)
+    logging.basicConfig(level=logging.basicConfig(level=config['logging']['level']))
 
     em1 = Dtsu666Emulator(device=config["emulator"]["port"],
                           slave_id=config["emulator"]["slave_id"])
