@@ -3,7 +3,7 @@ import argparse
 import minimalmodbus
 from config import load_config
 
-from dtsu666_constants import FOUR_WIRE_KEYS, MEASUREMENTS
+from dtsu666_constants import FOUR_WIRE_KEYS, REGISTERS
 
 CONFIG_FILE = "config.json"
 
@@ -29,7 +29,7 @@ class Dtsu666Reader:
         data = {}
         for key in FOUR_WIRE_KEYS:
             try:
-                spec = MEASUREMENTS[key]
+                spec = REGISTERS[key]
                 raw = self.instrument.read_float(spec["address"], spec["func"], spec["words"])
                 data[key] = raw * spec["factor"]
             except Exception as e:

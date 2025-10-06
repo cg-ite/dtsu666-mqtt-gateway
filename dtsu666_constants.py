@@ -36,7 +36,7 @@ TOTAL_EXPORT_ENERGY = "Total_Export_Energy"
 
 # Constants for DTSU666 measurement registers
 
-MEASUREMENTS = {
+REGISTERS = {
     "Voltage_Phase_AB": {"address": 0x2000, "func": 3, "words": 2, "factor": 0.1},
     "Voltage_Phase_BC": {"address": 0x2002, "func": 3, "words": 2, "factor": 0.1},
     "Voltage_Phase_CA": {"address": 0x2004, "func": 3, "words": 2, "factor": 0.1},

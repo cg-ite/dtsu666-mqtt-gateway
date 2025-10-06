@@ -11,10 +11,12 @@ from pymodbus.device import ModbusDeviceIdentification
 from pymodbus.version import version as ModbusVersion
 from pymodbus.constants import Endian
 
-from pymodbus.server.sync import StartSerialServer
+from pymodbus.server.async_io import StartSerialServer
 from pymodbus.transaction import ModbusRtuFramer
 from pymodbus.datastore import ModbusSequentialDataBlock
 from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
+
+from dtsu666_constants import REGISTERS
 
 CONFIG_FILE = "config.json"
 
@@ -24,34 +26,6 @@ BYTE_ORDER = Endian.Big
 header = [207, 701, 0, 0, 0, 0, 1, 10, 0, 0, 0, 1, 167, 0, 0,
           1000, 0, 0, 1000, 0, 0, 1000, 0, 0, 1000, 1, 10, 0, 0, 0,
           1000, 0, 0, 1000, 0, 0, 1000, 0, 0, 1000, 0, 0, 0, 0, 3, 3, 4]
-
-registermapping = {
-    "Volts_AB": {"addr": 0x2000, 'scale': .1},
-    "Volts_BC": {"addr": 0x2002, 'scale': .1},
-    "Volts_CA": {"addr": 0x2004, 'scale': .1},
-    "Volts_L1": {"addr": 0x2006, 'scale': .1},
-    "Volts_L2": {"addr": 0x2008, 'scale': .1},
-    "Volts_L3": {"addr": 0x200A, 'scale': .1},
-    "Current_L1": {"addr": 0x200C, 'scale': .001},
-    "Current_L2": {"addr": 0x200E, 'scale': .001},
-    "Current_L3": {"addr": 0x2010, 'scale': .001},
-    "Total_System_Active_Power": {"addr": 0x2012, 'scale': .1},
-    "Active_Power_L1": {"addr": 0x2014, 'scale': .1},
-    "Active_Power_L2": {"addr": 0x2016, 'scale': .1},
-    "Active_Power_L3": {"addr": 0x2018, 'scale': .1},
-    "Total_System_Reactive_Power": {"addr": 0x201A, 'scale': .1},
-    "Reactive_Power_L1": {"addr": 0x201C, 'scale': .1},
-    "Reactive_Power_L2": {"addr": 0x201E, 'scale': .1},
-    "Reactive_Power_L3": {"addr": 0x2020, 'scale': .1},
-    "Total_System_Power_Factor": {"addr": 0x202A, 'scale': .001},
-    "Power_Factor_L1": {"addr": 0x202C, 'scale': .001},
-    "Power_Factor_L2": {"addr": 0x202E, 'scale': .001},
-    "Power_Factor_L3": {"addr": 0x2030, 'scale': .001},
-    "Frequency": {"addr": 0x2044, 'scale': .01},
-    "DmPt": {"addr": 0x2050, 'scale': .1},
-    "Total_import_kwh": {"addr": 0x401E, 'scale': 1},
-    "Total_export_kwh": {"addr": 0x4028, 'scale': 1},
-}
 
 
 class Dtsu666Emulator:
@@ -88,7 +62,8 @@ class Dtsu666Emulator:
 
     def _startserver(self):
         logging.info("Starting Modbus server with timings...")
-        StartSerialServer(context=self.context, framer=ModbusRtuFramer, **self.RS485Settings)
+        StartSerialServer(context=self.context, framer=ModbusRtuFramer,
+                          **self.RS485Settings)
 
     def _datejob(self):
         while True:
@@ -113,9 +88,10 @@ class Dtsu666Emulator:
         self._setval(0x002f, builder.to_registers())
 
     def update(self, data):
+        logging.debug(f"Send data: {data}")
         for k, v in data.items():
-            reg = registermapping[k]["addr"]
-            d = v / registermapping[k]["scale"]
+            reg = REGISTERS[k]["address"]
+            d = v / REGISTERS[k]["factor"]
             builder = BinaryPayloadBuilder(byteorder=BYTE_ORDER, wordorder=WORD_ORDER)
             builder.add_32bit_float(d)
             self._setval(reg, builder.to_registers())

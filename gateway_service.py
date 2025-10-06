@@ -4,10 +4,10 @@ import json
 import paho.mqtt.client as mqtt
 
 from pymodbus.datastore import ModbusSequentialDataBlock, ModbusSlaveContext, ModbusServerContext
-from pymodbus.server import StartAsyncSerialServer
+from pymodbus.server.async_io import StartSerialServer
 
 from config import load_config
-from dtsu666_constants import MEASUREMENTS, VOLTAGE_PHASE_A, CURRENT_PHASE_A, TOTAL_IMPORT_ENERGY, TOTAL_EXPORT_ENERGY
+from dtsu666_constants import REGISTERS, VOLTAGE_PHASE_A, CURRENT_PHASE_A, TOTAL_IMPORT_ENERGY, TOTAL_EXPORT_ENERGY
 from dtsu666reader import Dtsu666Reader
 
 CONFIG_FILE = "config.json"
@@ -126,7 +126,7 @@ async def run_emulator():
     )
     context = ModbusServerContext(slaves={EMU_SLAVE_ID: store}, single=False)
 
-    await StartAsyncSerialServer(
+    await StartSerialServer(
         context=context,
         port=EMU_PORT,
         framer="rtu",
