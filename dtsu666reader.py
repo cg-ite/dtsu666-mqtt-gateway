@@ -47,6 +47,10 @@ class Dtsu666Reader:
             log.error("Could not connect to DTSU666 serial port.")
             return
 
+    def close(self):
+        self.instrument.close()
+        log.info("CLose connection to DTSU666 serial port.")
+
     async def read_values(self, count=1):
         """Reads the most important values from the DTSU666"""
         data = {}
@@ -78,18 +82,18 @@ async def main():
             "to a DTSU666 energy meter"
         )
     )
-    parser.add_argument("--port", help="Serial port (e.g. /dev/ttyUSB0)")
-    parser.add_argument("--baudrate", type=int, help="Baudrate (default: 9600)")
-    parser.add_argument("--slaveId", type=int, help="Modbus Slave ID (default: 1)")
-    args = parser.parse_args()
-
-    # override config with CLI arguments
-    if args.port:
-        config["port"] = args.port
-    if args.baudrate:
-        config["baudrate"] = args.baudrate
-    if args.slaveId:
-        config["slaveId"] = args.slaveId
+    # parser.add_argument("--port", help="Serial port (e.g. /dev/ttyUSB0)")
+    # parser.add_argument("--baudrate", type=int, help="Baudrate (default: 9600)")
+    # parser.add_argument("--slaveId", type=int, help="Modbus Slave ID (default: 1)")
+    # args = parser.parse_args()
+    #
+    # # override config with CLI arguments
+    # if args.port:
+    #     config["port"] = args.port
+    # if args.baudrate:
+    #     config["baudrate"] = args.baudrate
+    # if args.slaveId:
+    #     config["slaveId"] = args.slaveId
 
     reader = Dtsu666Reader(
         cfg=config
@@ -99,7 +103,8 @@ async def main():
     if values:
         for k, v in values.items():
             print(f"{k:30}: {v:.3f}")
-
+    reader.close()
+    
 def raise_graceful_exit(*_args):
     """Enters shutdown mode"""
     log.info("receiving shutdown signal now")
@@ -111,5 +116,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         log.info("Beendet.")
-    finally:
-        # asyncio.run(server.stop())
+
