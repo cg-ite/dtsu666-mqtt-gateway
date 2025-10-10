@@ -26,7 +26,7 @@ def load_config():
                 "topic_prefix": "dtsu666"
             },
             "poll_interval": 30,
-            "slave": {
+            "device": {
                 "id": 1
             },
             "emulator": {
