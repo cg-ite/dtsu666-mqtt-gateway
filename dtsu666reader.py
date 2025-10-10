@@ -104,7 +104,7 @@ async def main():
         for k, v in values.items():
             print(f"{k:30}: {v:.3f}")
     reader.close()
-    
+
 def raise_graceful_exit(*_args):
     """Enters shutdown mode"""
     log.info("receiving shutdown signal now")
