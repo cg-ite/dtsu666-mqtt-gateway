@@ -11,26 +11,32 @@ def load_config():
     else:
         # fallback default
         return {
-          "dtsu666": {
-            "port": "/dev/ttyUSB0",
-            "baudrate": 9600,
-            "slave_id": 1
-          },
-          "mqtt": {
-            "broker": "localhost",
-            "port": 1883,
-            "username": "user",
-            "password": "pass",
-            "topic_prefix": "dtsu666"
-          },
-          "poll_interval": 30,
-          "emulator": {
-            "enabled": True,
-            "port": "/dev/ttySO",
-            "baudrate": 9600,
-            "slave_id": 1
-          },
-          "logging": {
-            "level": 10
-          }
+            "reader": {
+                "port": "/dev/ttyUSB0",
+                "baudrate": 9600,
+                "parity": "N",
+                "stopbits": 1,
+                "timeout": 1
+            },
+            "mqtt": {
+                "host": "localhost",
+                "port": 1883,
+                "username": "user",
+                "password": "pass",
+                "topic_prefix": "dtsu666"
+            },
+            "poll_interval": 30,
+            "slave": {
+                "id": 1
+            },
+            "emulator": {
+                "enabled": True,
+                "port": "/dev/ttySO",
+                "baudrate": 9600,
+                "parity": "N",
+                "stopbits": 1
+            },
+            "logging": {
+                "level": 10
+            }
         }
