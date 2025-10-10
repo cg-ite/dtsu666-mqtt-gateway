@@ -99,6 +99,7 @@ async def main():
         cfg=config
     )
 
+    await reader.connect()
     values = await reader.read_values()
     if values:
         for k, v in values.items():
