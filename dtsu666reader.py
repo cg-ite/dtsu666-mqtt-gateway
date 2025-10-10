@@ -46,6 +46,7 @@ class Dtsu666Reader:
         if not self.instrument.connected:
             log.error("Could not connect to DTSU666 serial port.")
             return
+        log.info("Connected to DTSU666 serial port.")
 
     def close(self):
         self.instrument.close()
@@ -57,7 +58,7 @@ class Dtsu666Reader:
         for key in FOUR_WIRE_KEYS:
             try:
                 spec = REGISTERS[key]
-                rr = await self.instrument.read_holding_registers(spec["address"], count=count, device_id=self.device_id)
+                rr = await self.instrument.read_holding_registers(spec["address"], count=spec["func"], device_id=self.device_id)
                 if not rr or rr.isError():
                     log.warning(f"Read error from DTSU666 @ {spec["address"]}")
                     return [0] * count
