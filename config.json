@@ -1,6 +1,6 @@
 {
             "reader": {
-                "port": "/dev/ttyUSB0",
+                "port": "/dev/ttyS0",
                 "baudrate": 9600,
                 "parity": "N",
                 "stopbits": 1,
@@ -19,7 +19,7 @@
             },
             "emulator": {
                 "enabled": true,
-                "port": "/dev/ttySO",
+                "port": "/dev/ttyUSBO",
                 "baudrate": 9600,
                 "parity": "N",
                 "stopbits": 1
