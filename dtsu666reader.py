@@ -19,13 +19,13 @@ CONFIG_FILE = "config.json"
 # Logging configuration
 # --------------------------------------------------------------------------- #
 logging.basicConfig(format="%(asctime)s %(levelname)s: %(message)s", level=logging.INFO)
-log = logging.getLogger("dtsu666-proxy")
+log = logging.getLogger("dtsu666reader")
 
 class Dtsu666Reader:
     """Reader class for Chint DTSU666 energy meter"""
 
     def __init__(self, cfg):
-        self.device_id = cfg['device']['id']
+        self.device_id = cfg["device"]["id"]
         self.instrument = ModbusClient.AsyncModbusSerialClient(
             framer=FramerType.RTU,
             port=cfg["reader"]["port"],

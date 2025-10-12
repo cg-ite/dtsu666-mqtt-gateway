@@ -117,11 +117,11 @@ async def main():
         mqtt_client,
         cfg["mqtt"]["topic_prefix"],
         reader_client,
-        cfg["reader"]["slave_id"]
+        cfg["device"]["id"]
     )
 
     store = ModbusDeviceContext(hr=datablock)
-    context = ModbusServerContext(devices={cfg["emulator"]["slave_id"]: store}, single=False)
+    context = ModbusServerContext(devices={cfg["device"]["id"]: store}, single=False)
 
     log.info("Starting DTSU666 MQTT RTU Proxy ...")
     log.info(f"Reader port: {cfg['reader']['port']} → Emulator port: {cfg['emulator']['port']}")
