@@ -3,12 +3,12 @@
 import asyncio
 import datetime
 import logging
+import signal
 import struct
 
-from pymodbus.server import StartAsyncSerialServer
+from pymodbus.server import ModbusSerialServer
 from pymodbus.datastore import ModbusSequentialDataBlock, ModbusDeviceContext, ModbusServerContext
-from pymodbus import ModbusDeviceIdentification
-
+from pymodbus import ModbusDeviceIdentification, FramerType
 
 from config import load_config
 from dtsu666_constants import REGISTERS
@@ -23,15 +23,19 @@ logger = logging.getLogger("dtsu666-emulator")
 
 
 class Dtsu666Emulator:
-    def __init__(self, port: str, slave_id: int = 1, baudrate: int = 9600):
+    def __init__(self, port: str, device_id: int = 1, baudrate: int = 9600):
+        self.datetime_task = None
         self.port = port
-        self.slave_id = slave_id
+        self.device_id = device_id
         self.baudrate = baudrate
 
-        # Prepare register space (same size as before)
+        self.server_task = None
+        self.stop_event = asyncio.Event()
+
+        # Prepare register space
         self.block = ModbusSequentialDataBlock(0, [0] * 0x4052)
         self.store = ModbusDeviceContext(hr=self.block)
-        self.context = ModbusServerContext(devices={self.slave_id: self.store}, single=False)
+        self.context = ModbusServerContext(devices={self.device_id: self.store}, single=False)
 
         # identity
         self.identity = ModbusDeviceIdentification()
@@ -39,86 +43,104 @@ class Dtsu666Emulator:
         self.identity.ProductCode = "DTSU"
         self.identity.VendorUrl = "https://github.com/riptideio/pymodbus"
         self.identity.ProductName = "DTSU666 Energy Meter Emulator"
-        #self.identity.MajorMinorRevision = ModbusVersion.short()
 
-        # Initialize header (optional) - if you want the header at address 0
-        # example header list from your code; last element will be set to slave id
+        self.server = ModbusSerialServer(
+            context=self.context,
+            identity=self.identity,
+            port=self.port,
+            framer=FramerType.RTU,
+            baudrate=self.baudrate,
+            stopbits=1,
+            bytesize=8,
+            parity="N",
+        )
+
+        # header
         header = [207, 701, 0, 0, 0, 0, 1, 10, 0, 0, 0, 1, 167, 0, 0,
                   1000, 0, 0, 1000, 0, 0, 1000, 0, 0, 1000, 1, 10, 0, 0, 0,
                   1000, 0, 0, 1000, 0, 0, 1000, 0, 0, 1000, 0, 0, 0, 0, 3, 3, 4]
-        header[-1] = self.slave_id
+
+        header[-1] = self.device_id
         self._set_values(0, header)
 
+    # --------------------------
+    # Register setter helpers
+    # --------------------------
+
     def _set_values(self, address: int, registers):
-        """Write list of 16-bit registers into the sequential block."""
-        # ModbusSequentialDataBlock.setValues expects address (starting index) and list
-        # Address here is the register index (0-based).
         self.block.setValues(address, registers)
 
     def set_datetime(self):
-        """Write current time into registers starting at 0x002F (as 6 x 16-bit ints)."""
         now = datetime.datetime.now()
-        regs = [
-            int(now.second),
-            int(now.minute),
-            int(now.hour),
-            int(now.day),
-            int(now.month),
-            int(now.year),
-        ]
-        # write to 0x002F
+        regs = [now.second, now.minute, now.hour,
+                now.day, now.month, now.year]
         self._set_values(0x002F, regs)
 
     def _float_to_registers(self, value: float, byteorder='>'):
-        """Convert float to two 16-bit registers. byteorder '>' = big-endian."""
-        # pack float to 4 bytes big-endian
         packed = struct.pack(f"{byteorder}f", float(value))
-        # unpack into two unsigned shorts
         high, low = struct.unpack(f"{byteorder}HH", packed)
         return [high, low]
 
     def update_values(self, data: dict):
-        """Update measurement registers according to REGISTERS mapping.
-        REGISTERS[key] must contain 'address' and 'factor' (and optionally func/words).
-        Stored register format matches what the real meter expects (32-bit float split into two registers).
-        """
         for key, value in data.items():
             if key not in REGISTERS:
-                logger.debug("Unknown key %s, skipping", key)
                 continue
-            try:
-                info = REGISTERS[key]
-                addr = info["address"]
-                factor = info.get("factor", 1.0)
-                # scale back to raw register representation: meter stores value / factor
-                raw = float(value) / factor
-                regs = self._float_to_registers(raw, byteorder='>')
-                self._set_values(addr, regs)
-                logger.debug("Wrote %s -> addr %s regs=%s (raw=%s)", key, hex(addr), regs, raw)
-            except Exception as e:
-                logger.warning("Failed to write %s: %s", key, e)
+            info = REGISTERS[key]
+            addr = info["address"]
+            factor = info.get("factor", 1.0)
+            raw = float(value) / factor
+            regs = self._float_to_registers(raw)
+            self._set_values(addr, regs)
+
+    # --------------------------
+    # Background tasks
+    # --------------------------
 
     async def _datetime_updater(self):
-        while True:
+        while not self.stop_event.is_set():
             self.set_datetime()
             await asyncio.sleep(1)
 
+    # --------------------------
+    # Start / Stop
+    # --------------------------
+
     async def start(self):
-        logger.info("Starting DTSU666 emulator on %s (slave %d)", self.port, self.slave_id)
-        # Run serial server + datetime updater concurrently
-        await asyncio.gather(
-            StartAsyncSerialServer(
-                context=self.context,
-                identity=self.identity,
-                port=self.port,
-                framer="rtu",
-                baudrate=self.baudrate,
-                stopbits=1,
-                bytesize=8,
-                parity="N",
-            ),
-            self._datetime_updater(),
-        )
+        logger.info("Starting DTSU666 emulator on %s (slave %d)", self.port, self.device_id)
+
+        # Server starten (AsyncIO Start)
+        async def run_server():
+            await self.server.serve_forever()  # blockiert bis stop()
+
+        self.server_task = asyncio.create_task(run_server())
+
+        # Paralleler Task
+        self.datetime_task = asyncio.create_task(self._datetime_updater())
+
+        logger.info("DTSU666 emulator started.")
+
+    async def stop(self):
+        logger.info("Stopping DTSU666 emulator...")
+
+        # stop background loops
+        self.stop_event.set()
+
+        # stop server cleanly
+        if self.server:
+            await self.server.shutdown()
+
+        # cancel running tasks
+        if self.server_task:
+            self.server_task.cancel()
+            try:
+                await self.server_task
+            except asyncio.CancelledError:
+                pass
+
+        if hasattr(self, "datetime_task"):
+            self.datetime_task.cancel()
+
+        logger.info("DTSU666 emulator stopped.")
 
 
 async def main():
@@ -127,7 +149,7 @@ async def main():
     logging.basicConfig(level=cfg["logging"]["level"])
     emu = Dtsu666Emulator(
         port=emu_cfg["port"],
-        slave_id=cfg["device"]["id"],
+        device_id=cfg["device"]["id"],
         baudrate=emu_cfg.get("baudrate", 9600),
     )
 
@@ -156,13 +178,41 @@ async def main():
         "Total_Power_Factor": 0.094,
     }
 
+    # Hintergrund-Task: alle 1.1 s neue Werte schreiben
     async def updater():
-        while True:
+        while not emu.stop_event.is_set():
             emu.update_values(test_data)
-            await asyncio.sleep(1.1)  # respect meter timing >1s between instructions
+            await asyncio.sleep(1.1)
 
-    await asyncio.gather(emu.start(), updater())
+    # -----------------------------
+    # Start des Emulators
+    # -----------------------------
+    await emu.start()
+    updater_task = asyncio.create_task(updater())
 
+    # -----------------------------
+    # Shutdown-Handler (SIGINT/SIGTERM)
+    # -----------------------------
+    stop_event = asyncio.Event()
+
+    def shutdown_handler(*args):
+        logging.info("Shutdown signal received...")
+        stop_event.set()
+
+    # Signalhandler registrieren
+    loop = asyncio.get_running_loop()
+    loop.add_signal_handler(signal.SIGINT, shutdown_handler)
+    loop.add_signal_handler(signal.SIGTERM, shutdown_handler)
+
+    # Warten, bis Stopp-Signal kommt
+    await stop_event.wait()
+
+    # Server stoppen
+    logging.info("Stopping emulator...")
+    updater_task.cancel()
+    await emu.stop()
+
+    logging.info("Shutdown complete.")
 
 if __name__ == "__main__":
     try:
