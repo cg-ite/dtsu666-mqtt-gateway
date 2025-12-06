@@ -21,4 +21,4 @@ class LoggingDataBlock(ModbusSequentialDataBlock):
         if address not in REGISTERS:
             logger.info("WR wants to read unknown address %s", address)
             return
-        logger.info("WR reads address %s (%s)", REGISTERS[address]["name"], address)
+        logger.info("WR reads address %s (%s) with count: %i", REGISTERS[address]["name"], address, count)
