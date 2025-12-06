@@ -4,13 +4,12 @@ import asyncio
 import logging
 import signal
 from pymodbus.pdu.register_message import ReadHoldingRegistersResponse
-
-from config import load_config
 import pymodbus.client as ModbusClient
 from pymodbus import (
     FramerType,
 )
 
+from config import load_config
 from dtsu666_constants import FOUR_WIRE_KEYS, REGISTERS
 
 CONFIG_FILE = "config.json"
@@ -52,24 +51,27 @@ class Dtsu666Reader:
     async def read_values(self, count=1):
         """Reads the most important values from the DTSU666"""
         data = {}
-        for key in FOUR_WIRE_KEYS:
+        for address in FOUR_WIRE_KEYS:
             try:
-                spec = REGISTERS[key]
-                rr = await self.instrument.read_holding_registers(spec["address"], count=spec["words"], device_id=self.device_id)
+                spec = REGISTERS[address]
+                rr = await self.instrument.read_holding_registers(address,
+                                                                  count=spec["words"],
+                                                                  device_id=self.device_id)
 
                 if not isinstance(rr, ReadHoldingRegistersResponse):
                     continue
                 if not rr or rr.isError():
-                    log.warning(f"Read error from DTSU666 @ {spec["address"]}")
+                    log.warning(f"Read error from DTSU666 @ {address}")
                     return [0] * count
 
-                raw = self.instrument.convert_from_registers(rr.registers, word_order='big',
-                                                             data_type=self.instrument.DATATYPE.FLOAT32,
-                                                             string_encoding="ascii")
-                data[key] = raw * spec["factor"]
+                raw = self.instrument.convert_from_registers(
+                    rr.registers, word_order='big',
+                    data_type=self.instrument.DATATYPE.FLOAT32,
+                    string_encoding="ascii")
+                data[address] = raw * spec["factor"]
             except Exception as e:
-                print(f"Read error {key}: {e}")
-                data[key] = None
+                print(f"Read error {address}: {e}")
+                data[address] = None
         return data
 
 async def main():
@@ -108,4 +110,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         log.info("Exit.")
-

@@ -11,7 +11,7 @@ from pymodbus.datastore import ModbusSequentialDataBlock, ModbusDeviceContext, M
 from pymodbus import ModbusDeviceIdentification, FramerType
 
 from config import load_config
-from dtsu666_constants import REGISTERS
+from dtsu666_constants import *
 
 CONFIG_FILE = "config.json"
 
@@ -23,7 +23,10 @@ logger = logging.getLogger("dtsu666-emulator")
 
 
 class Dtsu666Emulator:
-    def __init__(self, port: str, device_id: int = 1, baudrate: int = 9600):
+    """Emulator class for Chint DTSU666 energy meter"""
+
+    def __init__(self, datablock:ModbusSequentialDataBlock,
+                 port: str, device_id: int = 1, baudrate: int = 9600):
         self.datetime_task = None
         self.port = port
         self.device_id = device_id
@@ -33,7 +36,7 @@ class Dtsu666Emulator:
         self.stop_event = asyncio.Event()
 
         # Prepare register space
-        self.block = ModbusSequentialDataBlock(0, [0] * 0x4052)
+        self.block = datablock
         self.store = ModbusDeviceContext(hr=self.block)
         self.context = ModbusServerContext(devices={self.device_id: self.store}, single=False)
 
@@ -155,27 +158,33 @@ async def main():
 
     # test data (example)
     test_data = {
-        "Voltage_Phase_AB": 403.6,
-        "Voltage_Phase_BC": 408.0,
-        "Voltage_Phase_CA": 404.5,
-        "Voltage_Phase_A": 231.0,
-        "Voltage_Phase_B": 235.1,
-        "Voltage_Phase_C": 236.1,
-        "Current_Phase_A": 0.339,
-        "Current_Phase_B": 0.360,
-        "Current_Phase_C": 0.352,
-        "Active_Power_Phase_A": 2.8,
-        "Active_Power_Phase_B": 11.8,
-        "Active_Power_Phase_C": 8.5,
-        "Reactive_Power_Phase_A": -76.7,
-        "Reactive_Power_Phase_B": -80.0,
-        "Reactive_Power_Phase_C": -79.7,
-        "Power_Factor_Phase_A": 0.036,
-        "Power_Factor_Phase_B": 0.140,
-        "Power_Factor_Phase_C": 0.102,
-        "Total_Active_Power": 23.2,
-        "Total_Reactive_Power": -236.5,
-        "Total_Power_Factor": 0.094,
+        VOLTAGE_PHASE_AB: 403.6,
+        VOLTAGE_PHASE_BC: 408.0,
+        VOLTAGE_PHASE_CA: 404.5,
+
+        VOLTAGE_PHASE_A: 231.0,
+        VOLTAGE_PHASE_B: 235.1,
+        VOLTAGE_PHASE_C: 236.1,
+
+        CURRENT_PHASE_A: 0.339,
+        CURRENT_PHASE_B: 0.360,
+        CURRENT_PHASE_C: 0.352,
+
+        ACTIVE_POWER_PHASE_A: 2.8,
+        ACTIVE_POWER_PHASE_B: 11.8,
+        ACTIVE_POWER_PHASE_C: 3.5,
+
+        REACTIVE_POWER_PHASE_A: -76.7,
+        REACTIVE_POWER_PHASE_B: -80.0,
+        REACTIVE_POWER_PHASE_C: -79.7,
+
+        POWER_FACTOR_PHASE_A: 0.036,
+        POWER_FACTOR_PHASE_B: 0.140,
+        POWER_FACTOR_PHASE_C: 0.102,
+
+        TOTAL_ACTIVE_POWER: 23.2,
+        TOTAL_REACTIVE_POWER: -27.5,
+        TOTAL_POWER_FACTOR: 0.094,
     }
 
     # Hintergrund-Task: alle 1.1 s neue Werte schreiben
